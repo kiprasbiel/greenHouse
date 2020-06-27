@@ -7,6 +7,9 @@ const int wateringRangeBot = 70;
 const int wateringRangeTop = 80;
 const int paklaida = 5;
 
+/* Kiek laiko uztrunka vienas laistymo ciklas */
+const int wateringInterval = 1;
+
 const int pureWater = 265;
 const int pureAir = 600;
 
@@ -44,7 +47,6 @@ void loop()
     ReadyToWater();
   }
   else {
-    Serial.println("Not watering");
     NotWateringTime();
   }
   
@@ -54,10 +56,7 @@ void ReadyToWater(){
   int moist_proc = waterSensor();
   Serial.println(moist_proc);
   if(moist_proc < wateringRangeBot){
-    digitalWrite(LedGreen, LOW);
-    digitalWrite(LedRed, HIGH);
-    digitalWrite(pump, HIGH);
-    delay(1000);
+    startWatering();
   }
   /* Dregna */
   else if(moist_proc > wateringRangeBot && moist_proc <= wateringRangeTop + paklaida){
@@ -81,13 +80,28 @@ void ReadyToWater(){
 }
 
 void NotWateringTime(){
-  digitalWrite(LedRed, HIGH);
-  delay(50);
-  digitalWrite(LedRed, LOW);
-  delay(5000);
+  int waterProc = waterSensor();
+  Serial.println(waterProc);
+  digitalWrite(pump, LOW);
+  if(waterProc <= wateringRangeTop && waterProc >= wateringRangeBot){
+    digitalWrite(LedRed, LOW);
+    digitalWrite(LedGreen, HIGH);
+    delay(50);
+    digitalWrite(LedGreen, LOW);
+    delay(5000);
+  }
+  else{
+    digitalWrite(LedGreen, LOW);
+    digitalWrite(LedRed, HIGH);
+    delay(50);
+    digitalWrite(LedRed, LOW);
+    delay(5000);
+  }
+  
+  
 }
-
 int waterSensor(){
+
   int moist_val = analogRead(water_sensor);
   int moist_proc = map(moist_val, pureAir, pureWater, 0, 100);
   
@@ -106,4 +120,17 @@ void tempretureCheck(){
       delay(50);
     }
   }
+}
+
+unsigned long mTime;
+int isTimeSet = 0;
+void startWatering(){
+  digitalWrite(LedGreen, LOW);
+    digitalWrite(LedRed, HIGH);
+    if(isTimeSet == 0){
+      mTime = millis();
+      isTimeSet = 1;
+    }
+    digitalWrite(pump, HIGH);
+    delay(1000);
 }
