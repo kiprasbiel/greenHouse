@@ -3,15 +3,22 @@
 DS3231  rtc(SDA, SCL);
 Time t;
 
+/* Disables time checking */
+const int testingMode = 1;
+
 const int wateringRangeBot = 70;
 const int wateringRangeTop = 80;
 const int paklaida = 5;
 
-/* Kiek laiko uztrunka vienas laistymo ciklas */
+/* Kiek laiko uztrunka vienas laistymo ciklas (min) */
 const int wateringInterval = 1;
+/* Kiek laiko laukti po laistymo, kada gali buti vel laistoma */
+const int wateringPauseTime = 5;
 
-const int pureWater = 265;
-const int pureAir = 600;
+int isTimeSet = 0;
+
+const int pureWater = 275;
+const int pureAir = 611;
 
 const int tempLow = 0;
 const int tempHigh = 40;
@@ -43,7 +50,7 @@ void loop()
   tempretureCheck();
   t = rtc.getTime();
   /* Sausa */
-  if(t.hour >= OnHour && t.hour <= OffHour){
+  if(t.hour >= OnHour && t.hour <= OffHour || testingMode == 1){
     ReadyToWater();
   }
   else {
@@ -123,14 +130,29 @@ void tempretureCheck(){
 }
 
 unsigned long mTime;
-int isTimeSet = 0;
+
 void startWatering(){
+  long currantTime = millis();
   digitalWrite(LedGreen, LOW);
-    digitalWrite(LedRed, HIGH);
-    if(isTimeSet == 0){
-      mTime = millis();
-      isTimeSet = 1;
-    }
+  digitalWrite(LedRed, HIGH);
+  if(isTimeSet == 0){
+    mTime = millis();
+    isTimeSet = 1;
+  }
+  /* Open valve for wateringInterval min and after that wait for wateringPauseTime min */
+  long timeDiff = currantTime - mTime;
+  Serial.print("Time passed: ");
+  Serial.println(timeDiff);
+  if(timeDiff < wateringInterval * 60000){
     digitalWrite(pump, HIGH);
-    delay(1000);
+  }
+  /* Watering Pause */
+  else if(timeDiff > wateringInterval * 60000 && timeDiff < wateringPauseTime * 60000){
+    digitalWrite(pump, LOW);
+  }
+  /* Pause expired */
+  else if(timeDiff > wateringPauseTime * 60000){
+    isTimeSet = 0;
+  }
+  delay(100);
 }
